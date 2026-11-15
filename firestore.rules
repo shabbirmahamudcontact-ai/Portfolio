@@ -1,0 +1,115 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global default-deny safety net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isSignedIn()
+        && request.auth.token.email_verified == true
+        && (
+          request.auth.token.email == 'shabbirmahamudcontact@gmail.com'
+          || exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+        );
+    }
+
+    function isValidSiteSetting(data) {
+      return data.keys().hasAll(['brand_name', 'owner_name'])
+        && data.keys().hasOnly(['brand_name', 'owner_name', 'hero_headline', 'hero_description', 'updated_at'])
+        && data.brand_name is string && data.brand_name.size() >= 1 && data.brand_name.size() <= 150
+        && data.owner_name is string && data.owner_name.size() >= 1 && data.owner_name.size() <= 150
+        && (!('hero_headline' in data) || (data.hero_headline is string && data.hero_headline.size() <= 300))
+        && (!('hero_description' in data) || (data.hero_description is string && data.hero_description.size() <= 1000))
+        && (!('updated_at' in data) || data.updated_at is timestamp);
+    }
+
+    function isValidProject(data) {
+      return data.keys().hasAll(['title', 'slug', 'category', 'is_published'])
+        && data.keys().hasOnly(['title', 'slug', 'category', 'description', 'is_published', 'display_order'])
+        && data.title is string && data.title.size() >= 1 && data.title.size() <= 200
+        && data.slug is string && data.slug.size() >= 1 && data.slug.size() <= 200 && data.slug.matches('^[a-zA-Z0-9_\\-]+$')
+        && data.category is string && data.category.size() >= 1 && data.category.size() <= 100
+        && data.is_published is bool
+        && (!('description' in data) || (data.description is string && data.description.size() <= 5000))
+        && (!('display_order' in data) || data.display_order is int);
+    }
+
+    function isValidService(data) {
+      return data.keys().hasAll(['title', 'slug', 'is_published'])
+        && data.keys().hasOnly(['title', 'slug', 'description', 'is_published', 'display_order'])
+        && data.title is string && data.title.size() >= 1 && data.title.size() <= 200
+        && data.slug is string && data.slug.size() >= 1 && data.slug.size() <= 200 && data.slug.matches('^[a-zA-Z0-9_\\-]+$')
+        && data.is_published is bool
+        && (!('description' in data) || (data.description is string && data.description.size() <= 3000))
+        && (!('display_order' in data) || data.display_order is int);
+    }
+
+    function isValidContactMessage(data) {
+      return data.keys().hasAll(['full_name', 'email', 'message', 'status', 'created_at'])
+        && data.keys().hasOnly(['full_name', 'email', 'phone', 'service', 'budget', 'message', 'status', 'created_at'])
+        && data.full_name is string && data.full_name.size() >= 2 && data.full_name.size() <= 120
+        && data.email is string && data.email.size() >= 5 && data.email.size() <= 180
+        && (!('phone' in data) || (data.phone is string && data.phone.size() <= 40))
+        && (!('service' in data) || (data['service'] is string && data['service'].size() <= 120))
+        && (!('budget' in data) || (data.budget is string && data.budget.size() <= 80))
+        && data.message is string && data.message.size() >= 5 && data.message.size() <= 4000
+        && data.status is string && data.status in ['unread', 'read', 'pending', 'contacted', 'archived']
+        && data.created_at is timestamp;
+    }
+
+    match /site_settings/{settingId} {
+      allow get: if isValidId(settingId) && settingId == 'public';
+      allow list: if false;
+      allow create, update: if isValidId(settingId) && isAdmin() && isValidSiteSetting(incoming());
+      allow delete: if isValidId(settingId) && isAdmin();
+    }
+
+    match /projects/{projectId} {
+      allow get: if isValidId(projectId) && (resource.data.is_published == true || isAdmin());
+      allow list: if resource.data.is_published == true || isAdmin();
+      allow create: if isValidId(projectId) && isAdmin() && isValidProject(incoming());
+      allow update: if isValidId(projectId) && isAdmin() && isValidProject(incoming());
+      allow delete: if isValidId(projectId) && isAdmin();
+    }
+
+    match /services/{serviceId} {
+      allow get: if isValidId(serviceId) && (resource.data.is_published == true || isAdmin());
+      allow list: if resource.data.is_published == true || isAdmin();
+      allow create: if isValidId(serviceId) && isAdmin() && isValidService(incoming());
+      allow update: if isValidId(serviceId) && isAdmin() && isValidService(incoming());
+      allow delete: if isValidId(serviceId) && isAdmin();
+    }
+
+    match /contact_messages/{messageId} {
+      allow get, list: if isAdmin();
+      allow create: if isValidId(messageId)
+        && isValidContactMessage(incoming())
+        && incoming().status == 'unread'
+        && incoming().created_at == request.time;
+      allow update: if isValidId(messageId)
+        && isAdmin()
+        && isValidContactMessage(incoming())
+        && incoming().created_at == existing().created_at
+        && incoming().diff(existing()).affectedKeys().hasOnly(['status']);
+      allow delete: if isValidId(messageId) && isAdmin();
+    }
+  }
+}

@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Shabbir Creative Visionary</title>
+    <script>
+      (function () {
+        var loc = window.location;
+        var path = loc.pathname || '/';
+        var idx = path.indexOf('/projects/');
+        if (idx === -1) idx = path.indexOf('/admin');
+        if (idx !== -1) {
+          var base = path.slice(0, idx) || '/';
+          var route = path.slice(idx);
+          if (!base.endsWith('/')) base += '/';
+          loc.replace(loc.origin + base + '#' + route + loc.search);
+        }
+      })();
+    </script>
+  </head>
+  <body></body>
+</html>

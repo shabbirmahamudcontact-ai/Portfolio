@@ -1,0 +1,78 @@
+{
+  "entities": {
+    "SiteSetting": {
+      "title": "SiteSetting",
+      "description": "Public portfolio configuration and brand settings",
+      "type": "object",
+      "properties": {
+        "brand_name": { "type": "string", "maxLength": 150 },
+        "owner_name": { "type": "string", "maxLength": 150 },
+        "hero_headline": { "type": "string", "maxLength": 300 },
+        "hero_description": { "type": "string", "maxLength": 1000 },
+        "updated_at": { "type": "string", "format": "date-time" }
+      },
+      "required": ["brand_name", "owner_name"]
+    },
+    "Project": {
+      "title": "Project",
+      "description": "Portfolio project showcase record",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string", "maxLength": 200 },
+        "slug": { "type": "string", "maxLength": 200, "pattern": "^[a-zA-Z0-9_-]+$" },
+        "category": { "type": "string", "maxLength": 100 },
+        "description": { "type": "string", "maxLength": 5000 },
+        "is_published": { "type": "boolean" },
+        "display_order": { "type": "integer" }
+      },
+      "required": ["title", "slug", "category", "is_published"]
+    },
+    "Service": {
+      "title": "Service",
+      "description": "Service offering entry",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string", "maxLength": 200 },
+        "slug": { "type": "string", "maxLength": 200, "pattern": "^[a-zA-Z0-9_-]+$" },
+        "description": { "type": "string", "maxLength": 3000 },
+        "is_published": { "type": "boolean" },
+        "display_order": { "type": "integer" }
+      },
+      "required": ["title", "slug", "is_published"]
+    },
+    "ContactMessage": {
+      "title": "ContactMessage",
+      "description": "Visitor contact inquiry submission",
+      "type": "object",
+      "properties": {
+        "full_name": { "type": "string", "minLength": 2, "maxLength": 120 },
+        "email": { "type": "string", "minLength": 5, "maxLength": 180 },
+        "phone": { "type": "string", "maxLength": 40 },
+        "service": { "type": "string", "maxLength": 120 },
+        "budget": { "type": "string", "maxLength": 80 },
+        "message": { "type": "string", "minLength": 5, "maxLength": 4000 },
+        "status": { "type": "string", "enum": ["unread", "read", "pending", "contacted", "archived"] },
+        "created_at": { "type": "string", "format": "date-time" }
+      },
+      "required": ["full_name", "email", "message", "status", "created_at"]
+    }
+  },
+  "firestore": {
+    "/site_settings/{settingId}": {
+      "schema": { "$ref": "#/entities/SiteSetting" },
+      "description": "Public portfolio site settings"
+    },
+    "/projects/{projectId}": {
+      "schema": { "$ref": "#/entities/Project" },
+      "description": "Portfolio projects"
+    },
+    "/services/{serviceId}": {
+      "schema": { "$ref": "#/entities/Service" },
+      "description": "Portfolio services"
+    },
+    "/contact_messages/{messageId}": {
+      "schema": { "$ref": "#/entities/ContactMessage" },
+      "description": "Visitor contact inquiries"
+    }
+  }
+}
